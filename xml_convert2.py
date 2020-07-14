@@ -1,10 +1,7 @@
 import pandas as pd
 import xlrd
 import xlsxwriter
-'''names='INVOICEDATE','INVOICENO','VOUCHERTYPE','CUSTOMERNAME','ITEMNAME','ITEMDESCRIPTION',
-'TAXRATE','QTY','UOM','RATE','DISCOUNT','ADDRESS1','STATE','PLACEOFSUPPLY','COUNTRY',
-'GSTRegistrationType','Amount','SalesLedger','Other Charges_1 Ledger','Other Charges_1 Amount','CGST_LEDGER','CGST_AMOUNT','SGST_LEDGER','SGST_AMOUNT',
-'ROUNDOFF_LEDGER','ROUNDOFF_AMOUNT','GODOWN','NARRATION' '''
+
 pop = pd.read_excel(r'Test//TallySales.xlsx',delimiter=r"\s+", names=['INVOICEDATE','INVOICENO','VOUCHERTYPE','CUSTOMERNAME','ITEMNAME','ITEMDESCRIPTION','TAXRATE','QTY','UOM','RATE','ADDRESS1','STATE','PLACEOFSUPPLY','COUNTRY','GSTRegistrationType','Amount','SalesLedger','Other Charges_1 Ledger','Other Charges_1 Amount','CGST_LEDGER','CGST_AMOUNT','SGST_LEDGER','SGST_AMOUNT','ROUNDOFF_LEDGER','ROUNDOFF_AMOUNT','GODOWN','NARRATION'])
 def func(row):
     xml = ['<BODY>']
