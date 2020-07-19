@@ -5,14 +5,19 @@ import json
 import ast
 import dateutil.parser
 import pandas as pd
+import re
+from datetime import datetime
 from xml.dom import minidom
+from collections import defaultdict
+
 
 def index_tree():
     global root3,root4,root5,root6,root7,root,tree
     root = etree.Element('ENVELOPE')
     root1 = etree.SubElement(root,'HEADER')
     etree.SubElement(root1, 'TALLYREQUEST').text = 'Import Data'
-    etree.SubElement(root1, 'HEADER').text = ''
+    #root1[-1].tail=''
+    etree.SubElement(root1,'HEADER').text = ''
     root3 = etree.SubElement(root1,'BODY')
     root4 = etree.SubElement(root3,'IMPORTDATA')
     root22= etree.SubElement(root4,'REQUESTDESC')
@@ -125,8 +130,9 @@ def lang(arg2,arg3):
     lang3 = etree.SubElement(lang2,'NAME')
     lang3.text=arg3
     lang2.text=''
-    lang4 = etree.SubElement(lang1,'LANGUAGEID')
-    lang4.text='1033'
+    if arg3 not in ("CGST","SGST"):
+        lang4 = etree.SubElement(lang1,'LANGUAGEID')
+        lang4.text='1033'
     lang1.text=''
 def ledger(arg2):
     ledger1 = etree.SubElement(root6,'LEDGER')
@@ -164,14 +170,14 @@ def ledger_rate(arg1,arg2):
         ledger4.text='Duties & Taxes'
     ledger5 =etree.SubElement(ledger1,'GSTAPPLICABLE')
     ledger5.text='Applicable'
-    ledger6 =etree.SubElement(ledger1,'TAXTYPE')
-    ledger6.text='GST'
     if arg1 != 'Sales @ 3%':
+        ledger6 =etree.SubElement(ledger1,'TAXTYPE')
+        ledger6.text='GST'
         ledger7 =etree.SubElement(ledger1,'GSTDUTYHEAD')
         ledger7.text=arg2
-    ledger8 =etree.SubElement(ledger1,'RATEOFTAXCALCULATION')
-    ledger8.text='0.75'
-    lang(ledger1,arg2)
+        ledger8 =etree.SubElement(ledger1,'RATEOFTAXCALCULATION')
+        ledger8.text='0.75'
+    lang(ledger1,arg1)
     ledger1.text=''
 def street(arg1):
     global newroot,newroot1
@@ -487,11 +493,8 @@ def account_list(arg1,arg2):
     aa10 = etree.SubElement(aa1,'AMOUNT')
     aa10.text=arg2
     aa1.text=''
-    d1.text=''
-    newroot1.text=''
-    newroot.text=''
 def prettify(xmlStr):
-    INDENT = "  "
+    INDENT = "   "
     rough_string = etree.tostring(xmlStr)
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml(indent=INDENT)
@@ -502,7 +505,7 @@ def fileoperations():
         data=infile.read()
         data=data.replace("null", '" "')
         dictdata = ast.literal_eval(data)
-        customernamelist,newlist,invoicelist=[],[],[]
+        customernamelist, newlist=[],[]
         for item in dictdata:
             newlist.append(item)
         for index in range(len(dictdata)):
@@ -510,9 +513,9 @@ def fileoperations():
                 if item == 'Customer Name':
                     individuallist=value
                     customernamelist.append(individuallist)
-                if item == 'Invoice No':
-                    inlist=value
-                    invoicelist.append(inlist)
+        invoicelist = defaultdict(list)
+        for d in newlist:
+            invoicelist[(d['Invoice No'])].append(d)
     return customernamelist,newlist,invoicelist
 
 def main():
@@ -527,7 +530,6 @@ def main():
     for i in invoicelist:
         if i not in uniqueinvoicelist:
             uniqueinvoicelist.append(i)
-
     uniquenamelist=[]
     for i in customernamelist:
         if i not in uniquenamelist:
@@ -537,46 +539,91 @@ def main():
     ledger_rate('CGST','Central Tax')
     ledger_rate('SGST','State Tax')
     ledger_rate('Sales @ 3%',None)
-    for values in newlist:
-        #for k in uniqueinvoicelist:
-        strdate = dateutil.parser.parse(values['Invoice Date'])
-        newdate=strdate.strftime("%Y%m%d")
-        street(values['Address 1'])
-        excel_values(newdate,values['State'],values['Narration'],values['Country'],values['Customer Name'],'Sales',values['Invoice No'],'Invoice Voucher View')
-        other_values(newdate)
-        sub_other()
-        ledger_other('Ledger_Party')
-        stramount=str(values['Amount'])
-        strcgstamount=str(values['CGST Amount'])
-        strsgstamount=str(values['SGST Amount'])
-        strroundamount=str(values['Round off Amount'])
-        otherchargesamount=str(values['Other Charges_1 Amount'])
-        strqty=str(values['QTY']) + (values['UOM'])
-        strrate=str(values['Rate']) + '/' + (values['UOM'])
-        ledger_voucher(values['Customer Name'],stramount)
-        b1.text=''
-        if values['Other Charges_1 Amount'] != 0 :
-            ledger_other('Ledger_Other1')
-            ledger_voucher(values['Other Charges_1 Ledger'],otherchargesamount)
-            rate_gst(otherchargesamount)
-        ledger_gst('CGST',strcgstamount,'Ledger_CGST',strcgstamount)
-        ledger_gst('SGST',strsgstamount,'Ledger_SGST',strsgstamount)
-        ledger_other('Ledger_Round')
-        ledger_voucher(values['Round off Ledger'],strroundamount)
-        rate_gst(strroundamount)
-        description(values['Item Description'],strrate,stramount,stramount,strqty)
-        batch_list(stramount,strqty)
-        account_list(values['Sales Ledger'],stramount)
-    root5.text=''
-    root4.text=''
-    root3.text=''
-    #etree.tostring(root, method="c14n")
-    #tree = etree.ElementTree(root)
-    tree.write("filename3.xml", encoding="utf-8", pretty_print=True, xml_declaration = None)
+    check=list(invoicelist.values())
+    for index in check:
+        ix=sorted(index, key=lambda k: k['Other Charges_1 Amount'],reverse=True)
+        for counter, value in enumerate(ix):
+            if counter > 0:
+                stramount2=str(value['Amount'])
+                strqty2=str(value['QTY']) + (value['UOM'])
+                strrate2=str(value['Rate']) + '/' + (value['UOM'])
+                description(value['Item Description'],strrate2,stramount2,stramount2,strqty2)
+                batch_list(stramount2,strqty2)
+                account_list(value['Sales Ledger'],stramount2)
+            if len(index) <= 1:
+                strdate = dateutil.parser.parse(value['Invoice Date'])
+                newdate=strdate.strftime("%Y%m%d")
+                street(value['Address 1'])
+                excel_values(newdate,value['State'],value['Narration'],value['Country'],value['Customer Name'],'Sales',value['Invoice No'],'Invoice Voucher View')
+                other_values(newdate)
+                sub_other()
+                ledger_other('Ledger_Party')
+                stramount=str(value['Amount'])
+                strcgstamount=str(value['CGST Amount'])
+                strsgstamount=str(value['SGST Amount'])
+                strroundamount=str(value['Round off Amount'])
+                otherchargesamount=str(value['Other Charges_1 Amount'])
+                strqty=str(value['QTY']) + (value['UOM'])
+                strrate=str(value['Rate']) + '/' + (value['UOM'])
+                ledger_voucher(value['Customer Name'],stramount)
+                b1.text=''
+                if value['Other Charges_1 Amount'] != 0 :
+                    ledger_other('Ledger_Other1')
+                    ledger_voucher(value['Other Charges_1 Ledger'],otherchargesamount)
+                    rate_gst(otherchargesamount)
+                ledger_gst('CGST',strcgstamount,'Ledger_CGST',strcgstamount)
+                ledger_gst('SGST',strsgstamount,'Ledger_SGST',strsgstamount)
+                ledger_other('Ledger_Round')
+                ledger_voucher(value['Round off Ledger'],strroundamount)
+                rate_gst(strroundamount)
+                description(value['Item Description'],strrate,stramount,stramount,strqty)
+                batch_list(stramount,strqty)
+                account_list(value['Sales Ledger'],stramount)
+            else:
+                if counter == 0:
+                    strdate = dateutil.parser.parse(value['Invoice Date'])
+                    newdate=strdate.strftime("%Y%m%d")
+                    street(value['Address 1'])
+                    excel_values(newdate,value['State'],value['Narration'],value['Country'],value['Customer Name'],'Sales',value['Invoice No'],'Invoice Voucher View')
+                    other_values(newdate)
+                    sub_other()
+                    ledger_other('Ledger_Party')
+                    stramount=str(value['Amount'])
+                    strcgstamount=str(value['CGST Amount'])
+                    strsgstamount=str(value['SGST Amount'])
+                    strroundamount=str(value['Round off Amount'])
+                    otherchargesamount=str(value['Other Charges_1 Amount'])
+                    strqty=str(value['QTY']) + (value['UOM'])
+                    strrate=str(value['Rate']) + '/' + (value['UOM'])
+                    ledger_voucher(value['Customer Name'],stramount)
+                    b1.text=''
+                    if value['Other Charges_1 Amount'] != 0 :
+                        ledger_other('Ledger_Other1')
+                        ledger_voucher(value['Other Charges_1 Ledger'],otherchargesamount)
+                        rate_gst(otherchargesamount)
+                    ledger_gst('CGST',strcgstamount,'Ledger_CGST',strcgstamount)
+                    ledger_gst('SGST',strsgstamount,'Ledger_SGST',strsgstamount)
+                    ledger_other('Ledger_Round')
+                    ledger_voucher(value['Round off Ledger'],strroundamount)
+                    rate_gst(strroundamount)
+                    description(value['Item Description'],strrate,stramount,stramount,strqty)
+                    batch_list(stramount,strqty)
+                    account_list(value['Sales Ledger'],stramount)
+
+    d1.text=''
+    newroot1.text=''
+    newroot.text=''
+    tree.write("outputfile_"+str(datetime.now().strftime('%Y%m%d'))+".xml", encoding="utf-8", pretty_print=True, xml_declaration=False)
     prettified_xmlStr = prettify(tree)
-    output_file = open("filename3.xml", "w")
-    output_file.write(prettified_xmlStr)
+    output_file = open("outputfile_"+str(datetime.now().strftime('%Y%m%d'))+".xml", "w")
+    new_data = prettified_xmlStr[prettified_xmlStr.find("?>")+2:]
+    #xmlstring='<?xml version="1.0"?>'
+    #regex=re.compile(pattern = "<\?xml version=\"1.0\"\?>")
+    #texts=regex.sub(r' ',prettified_xmlStr)
+    #print(texts)
+    output_file.write(new_data)
     output_file.close()
+
 
 if __name__ == "__main__":
     main()
