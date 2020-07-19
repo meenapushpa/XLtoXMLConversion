@@ -2,39 +2,57 @@ from lxml import etree
 from xml.etree.ElementTree import Element, SubElement, tostring
 import xlrd
 import json
+import os
+import glob
 import ast
 import dateutil.parser
 import pandas as pd
+import sys
 import re
+import bs4
 from datetime import datetime
 from xml.dom import minidom
 from collections import defaultdict
 
-
 def index_tree():
-    global root3,root4,root5,root6,root7,root,tree
+    global root,tree,root3,root4,root5,root6,root7
     root = etree.Element('ENVELOPE')
-    root1 = etree.SubElement(root,'HEADER')
+    tree = etree.ElementTree(root)
+    root1 = etree.Element('HEADER')
     etree.SubElement(root1, 'TALLYREQUEST').text = 'Import Data'
-    #root1[-1].tail=''
-    etree.SubElement(root1,'HEADER').text = ''
-    root3 = etree.SubElement(root1,'BODY')
-    root4 = etree.SubElement(root3,'IMPORTDATA')
-    root22= etree.SubElement(root4,'REQUESTDESC')
-    root7=etree.SubElement(root22,'REPORTNAME')
+    xmlroot=tree.getroot()
+    xmlroot.append(root1)
+
+    root3 = etree.Element('BODY')
+    tree2 = etree.ElementTree(root3)
+    root4 = etree.Element('IMPORTDATA')
+    tree3 = etree.ElementTree(root4)
+    root5= etree.Element('REQUESTDESC')
+    tree4 = etree.ElementTree(root5)
+    root7=etree.SubElement(root5,'REPORTNAME')
     root7.text ='Vouchers'
-    root25=etree.SubElement(root22,'STATICVARIABLES')
+    root25=etree.SubElement(root5,'STATICVARIABLES')
     root26=etree.SubElement(root25,'SVCURRENTCOMPANY')
     root26.text ='Gayathri Jewellers'
     root25.text = ''
-    etree.SubElement(root22, 'REQUESTDESC').text = ''
-    root5 = etree.SubElement(root22,'REQUESTDATA')
-    root6 = etree.SubElement(root5,'TALLYMESSAGE')
-    root6.set("xmlns", "TallyUDF")
-    root6.set('isMaster','Yes')
-    tree = etree.ElementTree(root)
+    root8 = etree.Element('REQUESTDATA')
+    tree5 = etree.ElementTree(root8)
+    xmlroot1=tree.getroot()
+    xmlroot1.append(root3)
+    xmlroot2=tree2.getroot()
+    xmlroot2.append(root4)
+    xmlroot3=tree3.getroot()
+    xmlroot3.append(root5)
+    xmlroot4=tree3.getroot()
+    xmlroot4.append(root8)
+    #etree.SubElement(root22, 'REQUESTDESC').text = ''
+    #root6 = etree.SubElement(root5,'REQUESTDATA')
+    root7 = etree.SubElement(root8,'TALLYMESSAGE')
+    root7.set("xmlns", "TallyUDF")
+    root7.set('isMaster','Yes')
+
 def unit_values():
-    unit1 = etree.SubElement(root6,'UNIT')
+    unit1 = etree.SubElement(root7,'UNIT')
     unit1.set('NAME','GMS')
     unit1.set('RESERVEDNAME','')
     root8 = etree.SubElement(unit1,'NAME')
@@ -49,7 +67,7 @@ def unit_values():
     root11.text ='Yes'
 def stock(arg1,arg2):
     global root12
-    root12 = etree.SubElement(root6,'STOCKITEM')
+    root12 = etree.SubElement(root7,'STOCKITEM')
     root12.set('NAME',arg2)
     root12.set('RESERVEDNAME','')
     root13 = etree.SubElement(root12,'GSTAPPLICABLE')
@@ -69,10 +87,10 @@ def stock(arg1,arg2):
     root20.text='No'
     root21 = etree.SubElement(root15,'GSTINELIGIBLEITC')
     root21.text='No'
-    root22 = etree.SubElement(root15,'STATEWISEDETAILS.LIST')
-    root23 = etree.SubElement(root22,'STATENAME')
+    root2s = etree.SubElement(root15,'STATEWISEDETAILS.LIST')
+    root23 = etree.SubElement(root2s,'STATENAME')
     root23.text='Any'
-    root24 = etree.SubElement(root22,'RATEDETAILS.LIST')
+    root24 = etree.SubElement(root2s,'RATEDETAILS.LIST')
     root25 = etree.SubElement(root24,'GSTRATEDUTYHEAD')
     root25.text='Central Tax'
     root26 = etree.SubElement(root24,'GSTRATEVALUATIONTYPE')
@@ -81,7 +99,7 @@ def stock(arg1,arg2):
     root27.text='0.75'
     root24.text = ''
 
-    state1 = etree.SubElement(root22,'RATEDETAILS.LIST')
+    state1 = etree.SubElement(root2s,'RATEDETAILS.LIST')
     state2 = etree.SubElement(state1,'GSTRATEDUTYHEAD')
     state2.text='State Tax'
     state3 = etree.SubElement(state1,'GSTRATEVALUATIONTYPE')
@@ -90,7 +108,7 @@ def stock(arg1,arg2):
     state4.text='0.75'
     state1.text = ''
 
-    Integrated1 = etree.SubElement(root22,'RATEDETAILS.LIST')
+    Integrated1 = etree.SubElement(root2s,'RATEDETAILS.LIST')
     Integrated2 = etree.SubElement(Integrated1,'GSTRATEDUTYHEAD')
     Integrated2.text='Integrated Tax'
     Integrated3 = etree.SubElement(Integrated1,'GSTRATEVALUATIONTYPE')
@@ -99,13 +117,13 @@ def stock(arg1,arg2):
     Integrated4.text='1.50'
     Integrated1.text = ''
 
-    Cess1 = etree.SubElement(root22,'RATEDETAILS.LIST')
+    Cess1 = etree.SubElement(root2s,'RATEDETAILS.LIST')
     Cess2 = etree.SubElement(Cess1,'GSTRATEDUTYHEAD')
     Cess2.text='Cess'
     Cess3 = etree.SubElement(Cess1,'GSTRATEVALUATIONTYPE')
     Cess3.text='Based on Value'
     Cess1.text = ''
-    root22.text = ''
+    root2s.text = ''
     root15.text = ''
 
     audit1 = etree.SubElement(root12,'OLDAUDITENTRYIDS.LIST')
@@ -118,7 +136,7 @@ def stock(arg1,arg2):
     lang(root12,arg2)
     root12.text=''
 def godown():
-    loc1 = etree.SubElement(root6,'GODOWN')
+    loc1 = etree.SubElement(root7,'GODOWN')
     loc1.set("NAME", "Main Location")
     loc1.set("RESERVEDNAME", "")
     lang(loc1,'Main Location')
@@ -135,7 +153,7 @@ def lang(arg2,arg3):
         lang4.text='1033'
     lang1.text=''
 def ledger(arg2):
-    ledger1 = etree.SubElement(root6,'LEDGER')
+    ledger1 = etree.SubElement(root7,'LEDGER')
     ledger1.set("NAME",arg2)
     ledger1.set("RESERVEDNAME","")
     ledger2 =etree.SubElement(ledger1,'MAILINGNAME.LIST')
@@ -152,9 +170,9 @@ def ledger(arg2):
     ledger4.text='Sundry Debtors'
     lang(ledger1,arg2)
     ledger1.text=''
-    root6.text=''
+    root7.text=''
 def ledger_rate(arg1,arg2):
-    ledger1 = etree.SubElement(root6,'LEDGER')
+    ledger1 = etree.SubElement(root7,'LEDGER')
     ledger1.set("NAME",arg1)
     ledger1.set("RESERVEDNAME","")
     ledger3 =etree.SubElement(ledger1,'OLDAUDITENTRYIDS.LIST')
@@ -499,29 +517,37 @@ def prettify(xmlStr):
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml(indent=INDENT)
 def fileoperations():
-    excel=pd.read_excel('Test\\TallySales.xlsx')
-    jsonobj = excel.to_json('Outputlist.json', orient='records',date_format='iso')
-    with open('Outputlist.json', 'r', encoding='utf-8') as infile:
-        data=infile.read()
-        data=data.replace("null", '" "')
-        dictdata = ast.literal_eval(data)
-        customernamelist, newlist=[],[]
-        for item in dictdata:
-            newlist.append(item)
-        for index in range(len(dictdata)):
-            for item,value in dictdata[index].items():
-                if item == 'Customer Name':
-                    individuallist=value
-                    customernamelist.append(individuallist)
-        invoicelist = defaultdict(list)
-        for d in newlist:
-            invoicelist[(d['Invoice No'])].append(d)
-    return customernamelist,newlist,invoicelist
+    try:
+        filename = glob.glob('Tally*.xlsx')
+        for i in filename:
+            excel=pd.read_excel(i)
+            jsonobj = excel.to_json('Outputlist.json', orient='records',date_format='iso')
+            with open('Outputlist.json', 'r', encoding='utf-8') as infile:
+                data=infile.read()
+                data=data.replace("null", '" "')
+                dictdata = ast.literal_eval(data)
+                customernamelist,newlist,invoicelist=[],[],[]
+                for item in dictdata:
+                    newlist.append(item)
+                for index in range(len(dictdata)):
+                    for item,value in dictdata[index].items():
+                        if item == 'Customer Name':
+                            individuallist=value
+                            customernamelist.append(individuallist)
+                invoicelist = defaultdict(list)
+                for d in newlist:
+                    invoicelist[(d['Invoice No'])].append(d)
+        return customernamelist,newlist,invoicelist
+    except (ValueError, TypeError) as e:
+        print('list is empty',e)
+    except OSError as e:
+        print('open() or file.__enter__() failed', e)
 
 def main():
     global tree
     customernamelist,newlist,invoicelist=fileoperations()
     index_tree()
+    #body_tree()
     unit_values()
     stock('20170701','Gold Ornaments')
     stock('20170701','Silver Ornaments')
@@ -613,17 +639,17 @@ def main():
     d1.text=''
     newroot1.text=''
     newroot.text=''
-    tree.write("outputfile_"+str(datetime.now().strftime('%Y%m%d'))+".xml", encoding="utf-8", pretty_print=True, xml_declaration=False)
+    root5.text=''
+    root4.text=''
+    root3.text=''
+    root.text=''
+    tree.write("outputfile_"+str(datetime.now().strftime('%Y%m%d'))+".xml", pretty_print=True,encoding='utf-8')
     prettified_xmlStr = prettify(tree)
     output_file = open("outputfile_"+str(datetime.now().strftime('%Y%m%d'))+".xml", "w")
     new_data = prettified_xmlStr[prettified_xmlStr.find("?>")+2:]
-    #xmlstring='<?xml version="1.0"?>'
-    #regex=re.compile(pattern = "<\?xml version=\"1.0\"\?>")
-    #texts=regex.sub(r' ',prettified_xmlStr)
-    #print(texts)
     output_file.write(new_data)
     output_file.close()
-
+    os.remove("Outputlist.json")
 
 if __name__ == "__main__":
     main()
