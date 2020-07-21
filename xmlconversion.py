@@ -438,7 +438,7 @@ def rate_gst(arg4):
     cc3.text='Based on Value'
     cc1.text=''
     b1.text=''
-def description(arg1,arg2,arg3,arg4,arg5):
+def description(arg1,arg2,arg3,arg4,arg5,arg6):
     global d1
     d1 = etree.SubElement(newroot1,'ALLINVENTORYENTRIES.LIST')
     d2 = etree.SubElement(d1,'BASICUSERDESCRIPTION.LIST')
@@ -447,7 +447,7 @@ def description(arg1,arg2,arg3,arg4,arg5):
     d3.text=arg1
     d2.text=''
     d4 = etree.SubElement(d1,'STOCKITEMNAME')
-    d4.text='Gold Ornaments'
+    d4.text=arg6
     d5 = etree.SubElement(d1,'ISDEEMEDPOSITIVE')
     d5.text='No'
     d6 = etree.SubElement(d1,'ISLASTDEEMEDPOSITIVE')
@@ -586,11 +586,13 @@ def main():
             Totalamt = round(Totalamt,2)
             Totalotherchargesamnt = round(float(Totalotherchargesamnt)+float(otherchargesamnt),2)
             strOthercharges = str(Totalotherchargesamnt)
-            TotalCGST += round(float(strcgstamt),2)
+            TotalCGST = round(float(TotalCGST)+float(strcgstamt),2)
             strCGST=str(TotalCGST)
-            TotalSGST += round(float(strsgstamt),2)
+            TotalSGST = round(float(TotalSGST)+float(strsgstamt),2)
             strSGST=str(TotalSGST)
-            ledgerpartyamount= '-'+ str(Totalamt)
+            addedvalue=-1
+            ledgerpartyamount=str(Totalamt * addedvalue)
+            print(ledgerpartyamount)
         for counter, value in enumerate(ix):
             if len(index) <= 1:
                 Totalamount2=0
@@ -619,7 +621,7 @@ def main():
                 ledger_other('Ledger_Round')
                 ledger_voucher(value['Round off Ledger'],strroundamount)
                 rate_gst(strroundamount)
-                description(value['Item Description'],strrate,stramount,stramount,strqty)
+                description(value['Item Description'],strrate,stramount,stramount,strqty,value['Item Name'])
                 batch_list(stramount,strqty)
                 account_list(value['Sales Ledger'],stramount)
             else:
@@ -646,7 +648,7 @@ def main():
                     ledger_other('Ledger_Round')
                     ledger_voucher(value['Round off Ledger'],strroundamount1)
                     rate_gst(strroundamount1)
-                    description(value['Item Description'],strrate,stramount1,stramount1,strqty)
+                    description(value['Item Description'],strrate,stramount1,stramount1,strqty,value['Item Name'])
                     batch_list(stramount1,strqty)
                     account_list(value['Sales Ledger'],stramount1)
                 else:
@@ -657,7 +659,7 @@ def main():
                     otherchargesamount2=str(value['Other Charges_1 Amount'])
                     strqty2=str(value['QTY']) + (value['UOM'])
                     strrate2=str(value['Rate']) + '/' + (value['UOM'])
-                    description(value['Item Description'],strrate2,stramount2,stramount2,strqty2)
+                    description(value['Item Description'],strrate2,stramount2,stramount2,strqty2,value['Item Name'])
                     batch_list(stramount2,strqty2)
                     account_list(value['Sales Ledger'],stramount2)
     d1.text=''
